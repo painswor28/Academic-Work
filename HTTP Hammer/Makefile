@@ -1,0 +1,91 @@
+CC=		gcc
+CFLAGS=		-g -Wall -std=gnu99 -Iinclude
+LD=		gcc
+LDFLAGS=	-Llib
+AR=		ar
+ARFLAGS=	rcs
+TARGETS=	bin/thor
+
+# -----------------------------------------------------------------------------
+
+all:		$(TARGETS)
+
+# TODO: Add rules for lib/libthor.a, bin/unit_{timestamp,socket,request,hammer},
+# bin/thor and any objects they require
+
+# -----------------------------------------------------------------------------
+
+# Rules for libthor.a library 
+
+lib/libthor.a: src/hammer.o src/request.o src/socket.o src/timestamp.o
+	$(AR) $(ARFLAGS) $@ $^
+
+src/hammer.o: src/hammer.c include/hammer.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+src/request.o: src/request.c include/request.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+src/socket.o: src/socket.c include/socket.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+src/timestamp.o: src/timestamp.c include/timestamp.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+src/thor.o: src/thor.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+test/unit_hammer.o: tests/unit_hammer.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+test/unit_request.o: test/unit_request.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+test/unit_socket.o: test/unit_socket.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+test/unit_timestamp.o: test/unit_timestamp.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+# Rules for bin tests
+
+bin/unit_timestamp: tests/unit_timestamp.o lib/libthor.a
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+bin/unit_socket: tests/unit_socket.o lib/libthor.a
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+bin/unit_request: tests/unit_request.o lib/libthor.a
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+bin/unit_hammer: tests/unit_hammer.o lib/libthor.a
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+bin/thor: src/thor.o lib/libthor.a
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+test:
+	@$(MAKE) -sk test-all
+
+test-all:               test-timestamp test-socket test-request test-hammer test-thor
+
+test-timestamp:		bin/unit_timestamp
+	@bin/test_timestamp.sh
+
+test-socket:		bin/unit_socket
+	@bin/test_socket.sh
+
+test-request:		bin/unit_request
+	@bin/test_request.sh
+
+test-hammer:		bin/unit_hammer
+	@bin/test_hammer.sh
+
+test-thor:		bin/thor
+	@bin/test_thor.sh
+
+clean:
+	@echo Cleaning...
+	@rm -f $(TARGETS) bin/unit_* lib/*.a src/*.o tests/*.o *.log *.input
+
+.PHONY:		all test clean
